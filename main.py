@@ -1,27 +1,69 @@
-from PyQt5 import QtWidgets, uic
+import sys
+from PyQt5.QtCore    import *
+from PyQt5.QtGui     import *
+from PyQt5.QtWidgets import *
 
 
-app = QtWidgets.QApplication([])
-sz = QtWidgets.QWidget
-mwindow = QtWidgets.QMainWindow
+class Widget(QWidget):
+    def __init__(self):
+        super().__init__()
+        self.openImageBtn = QPushButton('&Открыть изображение', self)
+        self.saveImageBtn = QPushButton('&Сохранить изображение', self)
 
-ui = uic.loadUi("main_window_design.ui")
-
-def get_size_of_desktop():
-    desktop = app.desktop()
-    return (desktop.width(), desktop.height())
-
-def get_size_of_win():
-    return (app.desktop().screenGeometry().width(), app.desktop().screenGeometry().height())
+        layout = QVBoxLayout(self)
+        layout.addWidget(self.openImageBtn)
+        layout.addWidget(self.saveImageBtn)
 
 
+class MainWindow(QMainWindow):
+    def __init__(self):
+        super(MainWindow, self).__init__()
+        self._itemImage = None
 
+        self.centralWidget = QWidget()
+        self.setCentralWidget(self.centralWidget)
 
+        self.widget = Widget()
+        self.widget.openImageBtn.clicked.connect(self.showOpenFileDialog)
+#        self.saveImageBtn.clicked.connect(self.showSaveFileDialog)
 
+        self._scene = QGraphicsScene()
+        self.view = QGraphicsView(self._scene)
+        self.showImage('im.png')
+        self.view.setScene(self._scene)
 
-print(get_size_of_desktop())
+        self.layout = QHBoxLayout(self.centralWidget)
+        self.layout.addWidget(self.view)
+        self.layout.addWidget(self.widget)
 
-#print(wid)
+    def showOpenFileDialog(self):
+        file_name = QFileDialog.getOpenFileName(
+                                self,
+                                'Пожалуйста, выберите изображение',
+                                '.',
+                                'Image Files (*.png *.jpg *.jpeg *.bmp)'
+                                               )[0]
+        if not file_name:
+            return
+        if self._itemImage:
+            # Удалить предыдущий элемент
+            self._scene.removeItem(self._itemImage)
+            del self._itemImage
+        self.showImage(file_name)
 
-ui.show()
-app.exec()
+    def showImage(self, file_name):
+        self._itemImage = self._scene.addPixmap(QPixmap(file_name))
+        self._itemImage.setFlag(QGraphicsItem.ItemIsMovable)            # <<<=====
+
+    def closeEvent(self, event):
+        """ Очистите все элементы в сцене, когда окно `закрыто` """
+        self._scene.clear()
+        self._itemImage = None
+        super(MainWindow, self).closeEvent(event)
+
+if __name__ == '__main__':
+    app = QApplication(sys.argv)
+    mw = MainWindow()
+    mw.resize(QSize(700, 400))
+    mw.show()
+    sys.exit(app.exec_())
