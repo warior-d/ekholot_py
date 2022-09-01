@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<kml><GroundOverlay><name>okk_16.jpg</name><color>88ffffff</color><Icon>
+<href>okk_16.jpg</href>
+<viewBoundScale>0.75</viewBoundScale></Icon><LatLonBox>
+<north>55.0717775309499</north>
+<south>55.0585760990893</south>
+<east>38.8451242446899</east>
+<west>38.7937545776367</west>
+</LatLonBox></GroundOverlay></kml>

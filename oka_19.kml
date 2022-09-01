@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<kml><GroundOverlay><name>oka_19.jpg</name><color>88ffffff</color><Icon>
+<href>oka_19.jpg</href>
+<viewBoundScale>0.75</viewBoundScale></Icon><LatLonBox>
+<north>55.0641675379281</north>
+<south>55.0634347838959</south>
+<east>38.8237845897675</east>
+<west>38.8217514753342</west>
+</LatLonBox></GroundOverlay></kml>
