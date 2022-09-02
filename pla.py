@@ -106,11 +106,19 @@ class Main(QWidget):
         coordinatesFromFile = getCoordsFromKML(getKMLfileName(Settings.FILE_NAME))
         Settings.LAT_NW, Settings.LON_NW, Settings.LAT_SE, Settings.LON_SE = coordinatesFromFile['north'], coordinatesFromFile['west'], coordinatesFromFile['south'], coordinatesFromFile['east']
         # Определим РЕАЛЬНОЕ (по координатам) расстояние между точками из KML
+        # И отобразим на карте!
+        self.rescaleMap()
+        #layout.addWidget(self.labelMap)
+        #self.setLayout(layout)
+
+
+    def rescaleMap(self):
         real_distance_map = distanceBetweenPointsMeters(Settings.LAT_NW, Settings.LON_NW, Settings.LAT_SE, Settings.LON_SE)
         #print(real_distance_map)
         # Определим расстояние с учетом пикселей картинки и гридом!
         x1, y1 = self.labelMap.pos().x(), self.labelMap.pos().y()
         x2, y2 = x1 + self.labelMap.pixmap().width(), y1 + self.labelMap.pixmap().height()
+        print(self.labelMap.pos().x(), self.labelMap.pos().y())
         grid = int(Settings.GRID_SCALE[self.mashtab - 1])
         gridStep = Settings.GRID_STEP
         pixelLenght = grid / gridStep
@@ -121,14 +129,8 @@ class Main(QWidget):
         # пересчитаем картинку и изменим ее
         width_new = self.labelMap.pixmap().width() * koef
         height_new = self.labelMap.pixmap().height() * koef
-        # И отобразим на карте!
-        self.rescaleMap(width_new, height_new)
-        #layout.addWidget(self.labelMap)
-        #self.setLayout(layout)
+        self.labelMap.setPixmap(QPixmap(Settings.FILE_NAME).scaled(int(width_new), int(height_new)))
 
-
-    def rescaleMap(self, width, height):
-        self.labelMap.setPixmap(QPixmap(Settings.FILE_NAME).scaled(int(width), int(height)))
         print("rescale")
 
     def paintEvent(self, event):
@@ -139,7 +141,7 @@ class Main(QWidget):
         y = self.labelMap.pos().y()
         painter = QPainter()
         painter.begin(self)
-        for i in range(0, 10000, Settings.GRID_STEP):
+        for i in range(-10000, 10000, Settings.GRID_STEP):
             painter.drawLine(x + i, 0, x + i, rec.height())
             painter.drawLine(x - i, 0, x - i, rec.height())
             painter.drawLine(0, y + i, rec.width(), y + i)
@@ -160,7 +162,9 @@ class Main(QWidget):
             if(self.mashtab > Settings.MASHTAB_MIN):
                 self.mashtab = self.mashtab - 1
         currentGrid = Settings.GRID_SCALE[self.mashtab - 1]
+        # TODO - каждый раз переопределять width и height
         self.labelData.setText('Mashtab | Grid: ( %s : %s m)' % (self.mashtab, currentGrid))
+        #self.rescaleMap()
 
     def mouseDoubleClickEvent(self, event):
         if event.button() == Qt.LeftButton:
