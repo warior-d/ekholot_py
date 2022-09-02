@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<kml><GroundOverlay><name>Lube.jpg</name><color>88ffffff</color><Icon>
+<href>Lube.jpg</href>
+<viewBoundScale>0.75</viewBoundScale></Icon><LatLonBox>
+<north>55.6922340166098</north>
+<south>55.6666640061882</south>
+<east>37.9295039176941</east>
+<west>37.8604745864868</west>
+</LatLonBox></GroundOverlay></kml>

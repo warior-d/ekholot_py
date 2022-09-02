@@ -17,7 +17,6 @@ def getCoordsFromKML(kmlfile):
     west = None
     east = None
     south = None
-    coordinates = {'north': None, 'west': None, 'east': None, 'south': None}
     for elem in root[0]:
         for subelem in elem:
             if subelem.tag == 'north':
@@ -71,7 +70,7 @@ class Settings():
     MASHTAB_MAX = 9
     RADIUS_EARTH_M = 6372795
     DEFAULT_MASHTAB = 3
-    FILE_NAME = "OKA_19_160.jpg"
+    FILE_NAME = "Lube.jpg" #"OKA_19_160.jpg"
     LAT_NW = None
     LON_NW = None
     LAT_SE = None
@@ -103,11 +102,13 @@ class Main(QWidget):
         self.labelData = QLabel(self)
         self.labelData.resize(160, 10)
         self.labelData.move(10, 40)
+        # Получим список координат
         coordinatesFromFile = getCoordsFromKML(getKMLfileName(Settings.FILE_NAME))
         Settings.LAT_NW, Settings.LON_NW, Settings.LAT_SE, Settings.LON_SE = coordinatesFromFile['north'], coordinatesFromFile['west'], coordinatesFromFile['south'], coordinatesFromFile['east']
+        # Определим РЕАЛЬНОЕ (по координатам) расстояние между точками из KML
         real_distance_map = distanceBetweenPointsMeters(Settings.LAT_NW, Settings.LON_NW, Settings.LAT_SE, Settings.LON_SE)
-        print(real_distance_map)
-        #print(self.labelMap.pixmap().width(), self.labelMap.pixmap().height())
+        #print(real_distance_map)
+        # Определим расстояние с учетом пикселей картинки и гридом!
         x1, y1 = self.labelMap.pos().x(), self.labelMap.pos().y()
         x2, y2 = x1 + self.labelMap.pixmap().width(), y1 + self.labelMap.pixmap().height()
         grid = int(Settings.GRID_SCALE[self.mashtab - 1])
@@ -115,13 +116,20 @@ class Main(QWidget):
         pixelLenght = grid / gridStep
         lengh_pixels = (((y2 - y1) ** (2)) + ((x2 - x1) ** (2))) ** (0.5)
         lengh_meters = lengh_pixels * pixelLenght
+        #TODO: koef очень похож на DrDepth, округлять бы...
         koef = real_distance_map / lengh_meters
+        # пересчитаем картинку и изменим ее
         width_new = self.labelMap.pixmap().width() * koef
         height_new = self.labelMap.pixmap().height() * koef
-        self.labelMap.setPixmap(QPixmap(Settings.FILE_NAME).scaled(int(width_new),int(height_new)))
+        # И отобразим на карте!
+        self.rescaleMap(width_new, height_new)
         #layout.addWidget(self.labelMap)
         #self.setLayout(layout)
 
+
+    def rescaleMap(self, width, height):
+        self.labelMap.setPixmap(QPixmap(Settings.FILE_NAME).scaled(int(width), int(height)))
+        print("rescale")
 
     def paintEvent(self, event):
         rec = event.rect()
@@ -143,7 +151,6 @@ class Main(QWidget):
             self.mouse_old_pos = event.pos() #позиция Мыши
             self.label_old_pos = self.labelMap.pos() #позиция Карты
             print(getCoord(int(Settings.GRID_SCALE[self.mashtab - 1]), self.labelMap.pos().x(), self.labelMap.pos().y(), self.mouse_old_pos.x(), self.mouse_old_pos.y()))
-            print(self.labelMap.width(), self.labelMap.height())
 
     def wheelEvent(self, event):
         if event.angleDelta().y()/120 > 0:
