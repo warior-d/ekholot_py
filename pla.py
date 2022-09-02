@@ -4,9 +4,45 @@ from PyQt5.QtCore import Qt
 from PyQt5.QtGui import QPixmap, QPainter, QColor, QPen
 from math import atan2, degrees, pi
 import geopy
+import os
 from geopy import Point
-from geopy.distance import geodesic
+from geopy.distance import geodesic, distance
+import xml.etree.ElementTree as ET
 
+
+def getCoordsFromKML(kmlfile):
+    tree = ET.parse(kmlfile)
+    root = tree.getroot()
+    north = None
+    west = None
+    east = None
+    south = None
+    coordinates = {'north': None, 'west': None, 'east': None, 'south': None}
+    for elem in root[0]:
+        for subelem in elem:
+            if subelem.tag == 'north':
+                north = subelem.text
+            if subelem.tag == 'west':
+                west = subelem.text
+            if subelem.tag == 'east':
+                east = subelem.text
+            if subelem.tag == 'south':
+                south = subelem.text
+    coordinates = {'north': north, 'west': west, 'east': east, 'south': south}
+    return coordinates
+
+
+def getKMLfileName(picFile):
+    PICfilename, PICfile_extension = picFile.split('.')
+    KMLfile = None
+    #TODO: scandir - сканирует текущую директорию!!!
+    with os.scandir(os.getcwd()) as files:
+        for file in files:
+            if file.is_file():
+                KMLfilename, KMLfile_extension = file.name.split('.')
+                if (KMLfile_extension.upper() == "KML") and (KMLfilename.upper() == PICfilename.upper()):
+                    KMLfile = KMLfilename + '.' + KMLfile_extension
+    return KMLfile
 
 def getCoord(grid, x_ground, y_ground, x_current, y_current):
     # https://github.com/geopy/geopy/blob/master/geopy/distance.py
@@ -19,8 +55,13 @@ def getCoord(grid, x_ground, y_ground, x_current, y_current):
     rads = atan2(delta_y, -delta_x)
     rads %= 2 * pi
     degs = degrees(rads) - 90
-    need_point = geodesic(kilometers=lengh_meters / 1000).destination(Point(Settings.LAT, Settings.LON), degs).format_decimal()
+    need_point = geodesic(kilometers=lengh_meters / 1000).destination(Point(Settings.LAT_NW, Settings.LON_NW), degs).format_decimal()
     return need_point
+
+def distanceBetweenPointsMeters(lat1, lon1, lat2, lon2):
+    point1 = (lat1, lon1)
+    point2 = (lat2, lon2)
+    return geodesic(point1, point2).meters
 
 class Settings():
     GRID_STEP = 80
@@ -29,10 +70,13 @@ class Settings():
     MASHTAB_MIN = 1
     MASHTAB_MAX = 9
     RADIUS_EARTH_M = 6372795
-    DEFAULT_MASHTAB = 4
-    FILE_NAME = "OKA_19_0.jpg"
-    LAT = 55.070145
-    LON = 38.801207
+    DEFAULT_MASHTAB = 3
+    FILE_NAME = "OKA_19_160.jpg"
+    LAT_NW = None
+    LON_NW = None
+    LAT_SE = None
+    LON_SE = None
+    GRID_SCALE = ["10", "20", "40", "80", "160", "320", "640", "1000", "2000"]
 
 class Label(QLabel):
     def __init__(self, parent=None):
@@ -45,22 +89,39 @@ class Main(QWidget):
     label_old_pos = None
     old_pos = None
     mashtab = Settings.DEFAULT_MASHTAB
-    grid_scale = ["10", "20", "40", "80", "160", "320", "640", "1000", "2000"]
+    KMLfileName = getKMLfileName(Settings.FILE_NAME)
 
 
     def __init__(self):
         super().__init__()
+        self.setGeometry(0, 0, 900, 800)
         #layout = QVBoxLayout()
         self.labelMap = Label(self)
-        self.setGeometry(0, 0, 900, 800)
         self.labelMap.move(200, 150)
         #включим отслеживание мышки
         self.setMouseTracking(True)
         self.labelData = QLabel(self)
         self.labelData.resize(160, 10)
         self.labelData.move(10, 40)
+        coordinatesFromFile = getCoordsFromKML(getKMLfileName(Settings.FILE_NAME))
+        Settings.LAT_NW, Settings.LON_NW, Settings.LAT_SE, Settings.LON_SE = coordinatesFromFile['north'], coordinatesFromFile['west'], coordinatesFromFile['south'], coordinatesFromFile['east']
+        real_distance_map = distanceBetweenPointsMeters(Settings.LAT_NW, Settings.LON_NW, Settings.LAT_SE, Settings.LON_SE)
+        print(real_distance_map)
+        #print(self.labelMap.pixmap().width(), self.labelMap.pixmap().height())
+        x1, y1 = self.labelMap.pos().x(), self.labelMap.pos().y()
+        x2, y2 = x1 + self.labelMap.pixmap().width(), y1 + self.labelMap.pixmap().height()
+        grid = int(Settings.GRID_SCALE[self.mashtab - 1])
+        gridStep = Settings.GRID_STEP
+        pixelLenght = grid / gridStep
+        lengh_pixels = (((y2 - y1) ** (2)) + ((x2 - x1) ** (2))) ** (0.5)
+        lengh_meters = lengh_pixels * pixelLenght
+        koef = real_distance_map / lengh_meters
+        width_new = self.labelMap.pixmap().width() * koef
+        height_new = self.labelMap.pixmap().height() * koef
+        self.labelMap.setPixmap(QPixmap(Settings.FILE_NAME).scaled(int(width_new),int(height_new)))
         #layout.addWidget(self.labelMap)
         #self.setLayout(layout)
+
 
     def paintEvent(self, event):
         rec = event.rect()
@@ -73,7 +134,6 @@ class Main(QWidget):
         for i in range(0, 10000, Settings.GRID_STEP):
             painter.drawLine(x + i, 0, x + i, rec.height())
             painter.drawLine(x - i, 0, x - i, rec.height())
-
             painter.drawLine(0, y + i, rec.width(), y + i)
             painter.drawLine(0, y - i, rec.width(), y - i)
         painter.end()
@@ -82,11 +142,8 @@ class Main(QWidget):
         if event.button() == Qt.LeftButton:
             self.mouse_old_pos = event.pos() #позиция Мыши
             self.label_old_pos = self.labelMap.pos() #позиция Карты
-            self.printer()
-            print(getCoord(int(self.grid_scale[self.mashtab - 1]), self.labelMap.pos().x(), self.labelMap.pos().y(), self.mouse_old_pos.x(), self.mouse_old_pos.y()))
-
-    def printer(self):
-        print(122)
+            print(getCoord(int(Settings.GRID_SCALE[self.mashtab - 1]), self.labelMap.pos().x(), self.labelMap.pos().y(), self.mouse_old_pos.x(), self.mouse_old_pos.y()))
+            print(self.labelMap.width(), self.labelMap.height())
 
     def wheelEvent(self, event):
         if event.angleDelta().y()/120 > 0:
@@ -95,7 +152,7 @@ class Main(QWidget):
         else:
             if(self.mashtab > Settings.MASHTAB_MIN):
                 self.mashtab = self.mashtab - 1
-        currentGrid = self.grid_scale[self.mashtab - 1]
+        currentGrid = Settings.GRID_SCALE[self.mashtab - 1]
         self.labelData.setText('Mashtab | Grid: ( %s : %s m)' % (self.mashtab, currentGrid))
 
     def mouseDoubleClickEvent(self, event):
@@ -104,9 +161,7 @@ class Main(QWidget):
 
     def mouseReleaseEvent(self, event):
         if event.button() == Qt.LeftButton:
-            #print(self.labelMap.pos())
             self.mouse_old_pos = None
-            #print("mouseReleaseEvent:", self.mouse_old_pos)
 
     def mouseMoveEvent(self, event):
         # координаты self.labelMap.pos() - экранные пиксели
