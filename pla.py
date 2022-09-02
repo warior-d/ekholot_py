@@ -7,6 +7,21 @@ import geopy
 from geopy import Point
 from geopy.distance import geodesic
 
+
+def getCoord(grid, x_ground, y_ground, x_current, y_current):
+    # https://github.com/geopy/geopy/blob/master/geopy/distance.py
+    gridStep = Settings.GRID_STEP
+    pixelLenght = grid / gridStep
+    delta_x = x_current - x_ground
+    delta_y = y_ground - y_current
+    lengh_pixels = (((y_current - y_ground) ** (2)) + ((x_current - x_ground) ** (2))) ** (0.5)
+    lengh_meters = lengh_pixels * pixelLenght
+    rads = atan2(delta_y, -delta_x)
+    rads %= 2 * pi
+    degs = degrees(rads) - 90
+    need_point = geodesic(kilometers=lengh_meters / 1000).destination(Point(Settings.LAT, Settings.LON), degs).format_decimal()
+    return need_point
+
 class Settings():
     GRID_STEP = 80
     FISHING_SIRCLE_RADIUS = 100
@@ -14,10 +29,10 @@ class Settings():
     MASHTAB_MIN = 1
     MASHTAB_MAX = 9
     RADIUS_EARTH_M = 6372795
-    DEFAULT_MASHTAB = 5
-    FILE_NAME = "Ok.PNG"
-
-
+    DEFAULT_MASHTAB = 4
+    FILE_NAME = "OKA_19_0.jpg"
+    LAT = 55.070145
+    LON = 38.801207
 
 class Label(QLabel):
     def __init__(self, parent=None):
@@ -65,11 +80,10 @@ class Main(QWidget):
 
     def mousePressEvent(self, event):
         if event.button() == Qt.LeftButton:
-            self.mouse_old_pos = event.pos()
-            self.label_old_pos = self.labelMap.pos()
+            self.mouse_old_pos = event.pos() #позиция Мыши
+            self.label_old_pos = self.labelMap.pos() #позиция Карты
             self.printer()
-            #print("Позиция мыши:", self.mouse_old_pos)
-            #print("Позиция label:", self.label_old_pos)
+            print(getCoord(int(self.grid_scale[self.mashtab - 1]), self.labelMap.pos().x(), self.labelMap.pos().y(), self.mouse_old_pos.x(), self.mouse_old_pos.y()))
 
     def printer(self):
         print(122)
@@ -94,53 +108,15 @@ class Main(QWidget):
             self.mouse_old_pos = None
             #print("mouseReleaseEvent:", self.mouse_old_pos)
 
-    def getCoord(self, x_current, y_current):
-        grid = int(self.grid_scale[self.mashtab - 1])
-        gridStep = Settings.GRID_STEP
-        pixelLenght = grid/gridStep
-        x_ground = self.labelMap.pos().x()
-        y_ground = self.labelMap.pos().y()
-
     def mouseMoveEvent(self, event):
-        # шир 55.0717775309499 дол 38.7937545776367
-        #
         # координаты self.labelMap.pos() - экранные пиксели
         # 80 px = 10m, 20m etc
         # latitude - (N,S) - широта - Y - увеличивается вверх
         # longitude - (E,W) - долгота - X - увеличивается направо
-        #
-        #
-        #
-        #
-
-
-
-        shirota = 55.0701537567759
-        dolgota = 38.8012003898621
-        grid = int(self.grid_scale[self.mashtab - 1])
-        gridStep = Settings.GRID_STEP
-        pixelLenght = grid/gridStep
-        x_ground = self.labelMap.pos().x()
-        y_ground = self.labelMap.pos().y()
-        x_current = event.windowPos().toPoint().x()
-        y_current = event.windowPos().toPoint().y()
-        delta_x = x_current - x_ground
-        delta_y = y_ground - y_current
-
-        lengh_pixels = ( ((y_current - y_ground) ** (2)) + ((x_current - x_ground) ** (2)) ) ** (0.5)
-        lengh_meters = lengh_pixels * pixelLenght
-        # https://github.com/geopy/geopy/blob/master/geopy/distance.py
-        rads = atan2(delta_y, -delta_x)
-        rads %= 2 * pi
-        degs = degrees(rads) - 90
-        need_point = geodesic(kilometers=lengh_meters/1000).destination(Point(shirota, dolgota), degs).format_decimal()
-        #print("grid: ", grid, "lengh_pixels:", int(lengh_pixels), "lengh_meters:", int(lengh_meters),"delta_x:", delta_x, "delta_y:", delta_y, "rads:", degs)
-        print(need_point)
-        print(event.windowPos().toPoint())
         if not self.mouse_old_pos:
             return
         delta = event.pos() - self.mouse_old_pos
-        self.labelMap.move(self.label_old_pos  + delta)
+        self.labelMap.move(self.label_old_pos + delta)
 
 
 
