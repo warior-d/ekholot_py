@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<kml><GroundOverlay><name>lubera_18_new.jpg</name><color>88ffffff</color><Icon>
+<href>lubera_18_new.jpg</href>
+<viewBoundScale>0.75</viewBoundScale></Icon><LatLonBox>
+<north>55.6922461368627</north>
+<south>55.6648022807835</south>
+<east>37.9289031028748</east>
+<west>37.8604423999786</west>
+</LatLonBox></GroundOverlay></kml>

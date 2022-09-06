@@ -1,25 +1,18 @@
-import sys
-from PyQt5.QtWidgets import (QApplication, QLabel, QWidget)
+import numpy as np
+import matplotlib.pyplot as plt
+import csv
+import pandas as pd
 
+with open('djer.csv', newline='') as f:
+ reader = csv.reader(f)
+ data = list(reader)
 
-class MouseTracker(QWidget):
-    def __init__(self):
-        super().__init__()
-        self.initUI()
-        self.setMouseTracking(True)
+np.array(data, dtype=float)
+print(np.array(data, dtype=float))
+#z = np.array(data, dtype=float)
 
-    def initUI(self):
-        self.setGeometry(300, 300, 300, 200)
-        self.setWindowTitle('Mouse Tracker')
-        self.label = QLabel(self)
-        self.label.resize(200, 40)
-        self.show()
-
-    def mouseMoveEvent(self, event):
-        self.label.setText('Mouse coords: ( %d : %d )' % (event.x(), event.y()))
-
-
-if __name__ == '__main__':
-    app = QApplication(sys.argv)
-    ex = MouseTracker()
-    sys.exit(app.exec_())
+x,y,z = np.loadtxt("data.txt", unpack=True)
+#plt.contourf(z, levels=[11, 12, 13],
+#    colors=['#808080', '#A0A0A0', '#C0C0C0'], extend='both')
+plt.contour(x.reshape(9,3), y.reshape(4,3), z.reshape(4,3))
+plt.show()
